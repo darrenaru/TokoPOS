@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+/* Font dibundel lokal (bukan CDN) agar tetap offline-first. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/PlusJakartaSans-Variable.woff2") format("woff2");
+}
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+
+  --color-brand-50: #f6fce8;
+  --color-brand-100: #ebf8c6;
+  --color-brand-200: #dcf49b;
+  --color-brand-300: #d0f176;
+  --color-brand-400: #c9f065;
+  --color-brand-500: #b9e64a;
+  --color-brand-600: #c8f560;
+  --color-brand-700: #3f6b0c;
+  --color-brand-800: #2f5209;
+  --color-brand-900: #1b2e05;
+
+  --color-ink: #121412;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-[#f4f5f2] text-slate-900 antialiased;
+}
+
+/* Scrollbar tipis dan konsisten di seluruh aplikasi (WebView2/Chromium). */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #c6cac2;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #9ea39a;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+}
+
+.struk-kertas {
+  position: relative;
+  margin: 8px 0;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.08));
+}
+.struk-kertas::before,
+.struk-kertas::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+}
+.struk-kertas::before {
+  top: -6px;
+  background: conic-gradient(from -45deg at bottom, transparent 90deg, #fff 0) 0 / 12px 100%;
+}
+.struk-kertas::after {
+  bottom: -6px;
+  background: conic-gradient(from 135deg at top, transparent 90deg, #fff 0) 0 / 12px 100%;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #struk-print,
+  #struk-print * {
+    visibility: visible;
+  }
+  #struk-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+  }
+}
+
+/* Animasi halaman login */
+@keyframes login-masuk {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes login-naik {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes login-melayang {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+@keyframes login-hanyut {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(18px, 14px) scale(1.12); }
+}
+@keyframes login-getar {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.login-kartu { animation: login-masuk 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.login-naik { animation: login-naik 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: var(--tunda, 0ms); }
+.login-melayang { animation: login-melayang 5s ease-in-out infinite; }
+.login-hanyut { animation: login-hanyut 9s ease-in-out infinite; }
+.login-hanyut-b { animation: login-hanyut 12s ease-in-out infinite reverse; }
+.login-getar { animation: login-getar 0.4s ease-in-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-kartu, .login-naik, .login-melayang, .login-hanyut, .login-hanyut-b, .login-getar {
+    animation: none;
+  }
+}
+
+/* Transisi login -> halaman utama */
+@keyframes login-keluar {
+  to { opacity: 0; transform: scale(1.04) translateY(-12px); filter: blur(4px); }
+}
+@keyframes app-masuk {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sidebar-masuk {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+.login-keluar { animation: login-keluar 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
+.app-masuk { animation: app-masuk 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.sidebar-masuk { animation: sidebar-masuk 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .login-keluar, .app-masuk, .sidebar-masuk { animation: none; }
+}
+
+/* Animasi halaman utama ------------------------------------------------- */
+@keyframes halaman-masuk {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes elemen-naik {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes baris-masuk {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes overlay-masuk {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-muncul {
+  from { opacity: 0; transform: translateY(14px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes item-keranjang {
+  from { opacity: 0; transform: translateX(24px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+.halaman-masuk { animation: halaman-masuk 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+/* Blok utama di dalam halaman muncul berurutan. */
+.halaman-masuk > * > *:not(.fixed) {
+  animation: elemen-naik 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.halaman-masuk > * > *:nth-child(2):not(.fixed) { animation-delay: 60ms; }
+.halaman-masuk > * > *:nth-child(3):not(.fixed) { animation-delay: 120ms; }
+.halaman-masuk > * > *:nth-child(4):not(.fixed) { animation-delay: 180ms; }
+.halaman-masuk > * > *:nth-child(n + 5):not(.fixed) { animation-delay: 240ms; }
+
+/* Baris tabel masuk satu per satu (maks. 12 baris pertama). */
+.halaman-masuk tbody tr { animation: baris-masuk 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.halaman-masuk tbody tr:nth-child(1) { animation-delay: 120ms; }
+.halaman-masuk tbody tr:nth-child(2) { animation-delay: 160ms; }
+.halaman-masuk tbody tr:nth-child(3) { animation-delay: 200ms; }
+.halaman-masuk tbody tr:nth-child(4) { animation-delay: 240ms; }
+.halaman-masuk tbody tr:nth-child(5) { animation-delay: 280ms; }
+.halaman-masuk tbody tr:nth-child(6) { animation-delay: 320ms; }
+.halaman-masuk tbody tr:nth-child(7) { animation-delay: 360ms; }
+.halaman-masuk tbody tr:nth-child(8) { animation-delay: 400ms; }
+.halaman-masuk tbody tr:nth-child(9) { animation-delay: 440ms; }
+.halaman-masuk tbody tr:nth-child(10) { animation-delay: 480ms; }
+.halaman-masuk tbody tr:nth-child(11) { animation-delay: 520ms; }
+.halaman-masuk tbody tr:nth-child(n + 12) { animation-delay: 560ms; }
+
+/* Modal/dialog: latar memudar, kotaknya muncul membesar. */
+.fixed.inset-0 { animation: overlay-masuk 0.2s ease-out backwards; }
+.fixed.inset-0 > * { animation: modal-muncul 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+/* Kartu produk & item keranjang. */
+.kartu-masuk { animation: elemen-naik 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; animation-delay: var(--tunda, 0ms); }
+.item-keranjang { animation: item-keranjang 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+/* Umpan balik tekan tombol. */
+button:active:not(:disabled) { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .halaman-masuk, .halaman-masuk > * > *, .halaman-masuk tbody tr,
+  .fixed.inset-0, .fixed.inset-0 > *, .kartu-masuk, .item-keranjang {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>TokoPOS Scanner</title>
+<style>
+  :root { --brand: #c8f560; --ink: #121412; --aksen: #c8f560; }
+  .wrap.mode-produk { --aksen: #38bdf8; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--ink); color: #fff;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { display: flex; flex-direction: column; height: 100%; }
+  header { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 16px; margin: 0; }
+  .pill { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #334155; }
+  .pill.ok { background: #059669; }
+  .pill.err { background: #dc2626; }
+  .video-box { position: relative; flex: 1; min-height: 0; background: #000; overflow: hidden; }
+  video { width: 100%; height: 100%; object-fit: cover; transform-origin: center center; }
+  .frame { position: absolute; left: 6%; right: 6%; top: 33%; height: 34%;
+    border: 3px solid rgba(255,255,255,.9); border-radius: 16px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,.38); pointer-events: none; transition: border-color .15s; }
+  .frame.hit { border-color: var(--aksen); }
+  .hint { position: absolute; left: 12px; right: 12px; top: 10px; text-align: center; font-size: 13px;
+    padding: 6px 10px; border-radius: 999px; background: rgba(0,0,0,.55); pointer-events: none; }
+  .hint.warn { background: rgba(217,119,6,.9); }
+  .toast { position: absolute; left: 12px; right: 12px; bottom: 64px; padding: 12px 14px;
+    border-radius: 12px; background: #1e293b; font-size: 14px; display: none; }
+  .toast.show { display: block; }
+  .toast.ok { background: #065f46; }
+  .toast.bad { background: #991b1b; }
+  .tools { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 8px;
+    align-items: center; justify-content: center; }
+  .tools button { border: 0; border-radius: 999px; padding: 9px 16px; font-size: 14px; font-weight: 700;
+    background: rgba(0,0,0,.6); color: #fff; min-width: 46px; }
+  .tools button.on { background: var(--aksen); color: var(--ink); }
+  footer { padding: 12px 16px; display: flex; gap: 8px; }
+  footer input { flex: 1; min-width: 0; padding: 12px; border-radius: 10px; border: 0; font-size: 16px; }
+  footer button { padding: 12px 16px; border-radius: 10px; border: 0; background: var(--brand);
+    color: var(--ink); font-weight: 700; font-size: 15px; }
+  .start { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 12px; background: var(--ink); text-align: center; padding: 24px; z-index: 5; }
+  .start button { padding: 14px 24px; border-radius: 12px; border: 0; background: var(--brand);
+    color: var(--ink); font-size: 16px; font-weight: 800; }
+  .start p { color: #94a3b8; font-size: 13px; margin: 0; max-width: 300px; }
+  /* pilihan mode */
+  .modebar { display: flex; gap: 8px; padding: 0 12px 10px; }
+  .modebar button { flex: 1; border: 2px solid #334155; background: #1e293b; color: #cbd5e1; border-radius: 14px;
+    padding: 9px 8px; font-size: 14px; font-weight: 800; line-height: 1.2; text-align: center; }
+  .modebar button small { display: block; font-size: 11px; font-weight: 500; opacity: .75; margin-top: 2px; }
+  .modebar button.on { background: var(--aksen); border-color: var(--aksen); color: var(--ink); }
+  .modebar button:disabled { opacity: .45; }
+  #btnTanpa { display: none; background: #334155; color: #fff; }
+  .wrap.mode-produk #btnTanpa { display: block; }
+
+  /* form tambah produk */
+  .form { position: fixed; inset: 0; z-index: 20; background: var(--ink); overflow-y: auto; display: none; }
+  .form.show { display: block; }
+  .form-in { max-width: 520px; margin: 0 auto; padding: 16px 16px 28px; }
+  .form h2 { margin: 0 0 4px; font-size: 18px; }
+  .form .sub { margin: 0 0 14px; font-size: 12px; color: #94a3b8; }
+  .form label { display: block; margin: 12px 0 5px; font-size: 13px; font-weight: 700; color: #cbd5e1; }
+  .form input, .form select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155;
+    background: #1e293b; color: #fff; font-size: 16px; }
+  .form input::placeholder { color: #64748b; }
+  .form .row { display: flex; gap: 8px; }
+  .form .row > input, .form .row > select { flex: 1; min-width: 0; }
+  .form .row > button { flex: none; border: 0; border-radius: 10px; padding: 0 14px; background: #334155; color: #fff;
+    font-size: 14px; font-weight: 700; }
+  .form .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form .foto { display: flex; gap: 10px; align-items: center; }
+  .form .foto img { width: 96px; height: 60px; object-fit: cover; border-radius: 8px; background: #1e293b; flex: none; }
+  .form .foto .col { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .form .foto button { border: 0; border-radius: 10px; padding: 10px; background: #334155; color: #fff; font-size: 14px; font-weight: 700; }
+  .form .ferr { min-height: 18px; margin: 12px 0 0; font-size: 13px; color: #fca5a5; }
+  .form .btns { margin-top: 10px; }
+  .form .btns button { flex: 1; padding: 14px; font-size: 16px; font-weight: 800; border: 0; border-radius: 12px; }
+  #fSimpan { background: #38bdf8; color: var(--ink); }
+  #fSimpan:disabled { opacity: .6; }
+  #fBatal { background: #334155; color: #fff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>TokoPOS Scanner</h1>
+    <span id="status" class="pill">Menghubungkan...</span>
+  </header>
+  <div class="modebar">
+    <button id="modeBeli" class="on">Tambah ke Keranjang<small>Pembelian</small></button>
+    <button id="modeProduk">Tambah Produk<small>Daftarkan produk baru</small></button>
+  </div>
+  <div class="video-box" id="box">
+    <video id="video" playsinline muted></video>
+    <div class="frame" id="frame"></div>
+    <div id="hint" class="hint">Arahkan barcode ke dalam kotak</div>
+    <div id="toast" class="toast"></div>
+    <div class="tools">
+      <button id="btnZ1" class="on">1x</button>
+      <button id="btnZ2">2x</button>
+      <button id="btnZ3">3x</button>
+      <button id="btnTorch" style="display:none">Senter</button>
+    </div>
+    <div id="start" class="start">
+      <button id="btnStart">Mulai Kamera</button>
+      <p id="startMsg">Izinkan akses kamera lalu arahkan ke barcode produk. Barcode boleh miring atau tegak.</p>
+    </div>
+  </div>
+  <footer>
+    <input id="manual" inputmode="numeric" placeholder="Ketik barcode manual" />
+    <button id="btnSend">Kirim</button>
+    <button id="btnTanpa" type="button">Tanpa barcode</button>
+    <button id="btnFoto" style="background:#334155;color:#fff">Foto</button>
+    <input id="foto" type="file" accept="image/*" capture="environment" style="display:none" />
+  </footer>
+</div>
+<div id="form" class="form">
+  <div class="form-in">
+    <h2>Tambah Produk Baru</h2>
+    <p class="sub">Data langsung tersimpan ke aplikasi kasir di komputer.</p>
+
+    <label for="fBarcode">Barcode</label>
+    <div class="row">
+      <input id="fBarcode" inputmode="numeric" autocomplete="off" placeholder="Kosongkan jika tidak ada" />
+      <button id="fScanUlang" type="button">Scan ulang</button>
+    </div>
+
+    <label for="fNama">Nama Produk *</label>
+    <input id="fNama" autocomplete="off" placeholder="Contoh: Aqua Botol 600ml" />
+
+    <label for="fKategori">Kategori</label>
+    <div class="row">
+      <select id="fKategori"></select>
+      <button id="fKatBaru" type="button">+ Baru</button>
+    </div>
+    <div id="katBaruRow" class="row" style="display:none;margin-top:8px">
+      <input id="katBaruNama" autocomplete="off" placeholder="Nama kategori baru" />
+      <button id="katBaruOk" type="button">Tambah</button>
+    </div>
+
+    <div class="grid2">
+      <div><label for="fBeli">Harga Beli (Rp)</label><input id="fBeli" data-uang inputmode="numeric" placeholder="0" /></div>
+      <div><label for="fJual">Harga Jual (Rp) *</label><input id="fJual" data-uang inputmode="numeric" placeholder="0" /></div>
+    </div>
+    <div class="grid2">
+      <div><label for="fStok">Stok Awal</label><input id="fStok" data-uang inputmode="numeric" placeholder="0" /></div>
+      <div><label for="fMin">Stok Minimum</label><input id="fMin" data-uang inputmode="numeric" placeholder="0" /></div>
+    </div>
+
+    <label for="fSatuan">Satuan</label>
+    <select id="fSatuan"></select>
+
+    <label>Foto Produk (opsional)</label>
+    <div class="foto">
+      <img id="fFotoPrev" alt="" style="display:none" />
+      <div class="col">
+        <button id="fFotoKamera" type="button">Ambil Foto</button>
+        <button id="fFotoGaleri" type="button">Pilih dari Galeri</button>
+        <button id="fFotoHapus" type="button" style="display:none">Hapus Foto</button>
+      </div>
+    </div>
+    <input id="fFotoInputKamera" type="file" accept="image/*" capture="environment" style="display:none" />
+    <input id="fFotoInputGaleri" type="file" accept="image/*" style="display:none" />
+
+    <p id="fError" class="ferr"></p>
+    <div class="row btns">
+      <button id="fBatal" type="button">Batal</button>
+      <button id="fSimpan" type="button">Simpan Produk</button>
+    </div>
+  </div>
+</div>
+<script src="/zbar.min.js"></script>
+<script src="/zxing.min.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var token = params.get("token") || "";
+  var statusEl = document.getElementById("status");
+  var toastEl = document.getElementById("toast");
+  var hintEl = document.getElementById("hint");
+  var frameEl = document.getElementById("frame");
+  var ws = null, wsReady = false, denied = false, lastCode = "", lastTime = 0, toastTimer = null;
+  var wrapEl = document.querySelector(".wrap");
+  var mode = "beli", bisaTambah = false, kategori = [], formTerbuka = false, fotoData = null;
+  try { if (localStorage.getItem("tokopos_mode") === "produk") mode = "produk"; } catch (e) {}
+
+  // Bunyi "beep" saat barcode terbaca. Browser HP baru mengizinkan suara setelah ada ketukan pengguna,
+  // jadi audio "dibuka" saat tombol Mulai Kamera ditekan.
+  var beepAudio = new Audio("/beep.mp3");
+  beepAudio.preload = "auto";
+  function bukaKunciAudio() {
+    beepAudio.muted = true;
+    var pr = beepAudio.play();
+    var pulih = function () { beepAudio.pause(); beepAudio.currentTime = 0; beepAudio.muted = false; };
+    if (pr && pr.then) pr.then(pulih).catch(function () { beepAudio.muted = false; }); else pulih();
+  }
+  function bunyiBeep() {
+    try { beepAudio.currentTime = 0; var pr = beepAudio.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+  }
+
+  function teksHint() {
+    return mode === "produk" ? "Mode Tambah Produk: scan barcode produk baru" : "Mode Pembelian: scan untuk masuk ke keranjang";
+  }
+  function terapkanMode() {
+    wrapEl.className = "wrap" + (mode === "produk" ? " mode-produk" : "");
+    document.getElementById("modeBeli").className = mode === "beli" ? "on" : "";
+    document.getElementById("modeProduk").className = mode === "produk" ? "on" : "";
+    hintEl.textContent = teksHint(); hintEl.className = "hint";
+  }
+  function kirimMode() { if (wsReady) ws.send(JSON.stringify({ type: "mode", mode: mode })); }
+  function setMode(m) {
+    if (m === "produk" && !bisaTambah) { toast("Tambah produk hanya untuk akun admin", "bad"); return; }
+    mode = m;
+    try { localStorage.setItem("tokopos_mode", m); } catch (e) {}
+    terapkanMode(); kirimMode();
+  }
+  document.getElementById("modeBeli").onclick = function () { setMode("beli"); };
+  document.getElementById("modeProduk").onclick = function () { setMode("produk"); };
+  terapkanMode();
+
+  function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = "pill " + (cls || ""); }
+  function toast(text, cls) {
+    toastEl.textContent = text; toastEl.className = "toast show " + (cls || "");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { toastEl.className = "toast"; }, text.length > 40 ? 3500 : 2000);
+  }
+
+  /* ---------- koneksi ke aplikasi kasir ---------- */
+  function connect() {
+    var proto = location.protocol === "https:" ? "wss://" : "ws://";
+    ws = new WebSocket(proto + location.host + "/ws?token=" + encodeURIComponent(token));
+    ws.onopen = function () { wsReady = true; setStatus("Terhubung", "ok"); kirimMode(); };
+    ws.onclose = function () {
+      wsReady = false;
+      if (denied) return;
+      setStatus("Terputus, mencoba lagi...", "err"); setTimeout(connect, 1500);
+    };
+    ws.onerror = function () { try { ws.close(); } catch (e) {} };
+    ws.onmessage = function (ev) {
+      var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg.type === "hello") {
+        bisaTambah = !!msg.bisa_tambah_produk;
+        isiKategori(msg.kategori || []);
+        var bp = document.getElementById("modeProduk");
+        bp.disabled = !bisaTambah;
+        bp.querySelector("small").textContent = bisaTambah ? "Daftarkan produk baru" : "Khusus admin";
+        if (!bisaTambah && mode === "produk") { mode = "beli"; terapkanMode(); }
+        kirimMode();
+      } else if (msg.type === "result") {
+        hasilScan(msg);
+      } else if (msg.type === "produk_tersimpan") {
+        hasilSimpan(msg);
+      } else if (msg.type === "kategori") {
+        isiKategori(msg.list || [], msg.dipilih);
+        document.getElementById("katBaruRow").style.display = "none";
+        document.getElementById("katBaruNama").value = "";
+      } else if (msg.type === "error") {
+        if (formTerbuka) document.getElementById("fError").textContent = msg.pesan || "Terjadi kesalahan";
+        else toast(msg.pesan || "Terjadi kesalahan", "bad");
+      } else if (msg.type === "kicked") {
+        denied = true;
+        setStatus("Diputus dari aplikasi kasir", "err");
+      } else if (msg.type === "denied") {
+        denied = true;
+        setStatus("QR kedaluwarsa, scan ulang dari aplikasi", "err");
+      }
+    };
+  }
+
+  function kirim(code) {
+    var now = Date.now();
+    if (code === lastCode && now - lastTime < 1800) return;
+    lastCode = code; lastTime = now;
+    frameEl.className = "frame hit"; setTimeout(function () { frameEl.className = "frame"; }, 350);
+    bunyiBeep();
+    if (!wsReady) { toast("Belum terhubung ke aplikasi", "bad"); return; }
+    ws.send(JSON.stringify({ type: "scan", code: code, mode: mode }));
+  }
+
+  // Format ber-checksum (EAN/UPC/Code128) aman dikirim langsung; format lain (mis. Code39)
+  // harus terbaca 2x berturut-turut agar tidak salah baca.
+  var KUAT = { EAN13: 1, EAN8: 1, UPCA: 1, UPCE: 1, ISBN13: 1, CODE128: 1, QRCODE: 1, QR_CODE: 1, EAN_13: 1, EAN_8: 1, UPC_A: 1, UPC_E: 1, CODE_128: 1 };
+  var kandidat = {};
+  function terima(code, tipe) {
+    if (!code || formTerbuka) return;
+    var kunci = String(tipe || "").replace("ZBAR_", "").toUpperCase();
+    if (KUAT[kunci]) { kirim(code); return; }
+    var now = Date.now();
+    var k = kandidat[code];
+    if (k && now - k < 1200) { delete kandidat[code]; kirim(code); }
+    else kandidat[code] = now;
+  }
+
+  document.getElementById("btnSend").onclick = function () {
+    var el = document.getElementById("manual"); var v = el.value.trim();
+    if (v) { kirim(v); el.value = ""; }
+  };
+
+  /* ---------- pemindaian ---------- */
+  var video = document.getElementById("video");
+  var box = document.getElementById("box");
+  var canvas = document.createElement("canvas");
+  var ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  // Mesin 1: ZBar (WebAssembly) - toleran terhadap barcode miring, tegak, dan kualitas rendah.
+  var zbarScanner = null;
+  function siapkanZbar() {
+    if (!window.zbarWasm) return Promise.resolve();
+    return window.zbarWasm.ZBarScanner.create().then(function (s) {
+      var T = window.zbarWasm.ZBarSymbolType, C = window.zbarWasm.ZBarConfigType;
+      s.setConfig(T.ZBAR_NONE, C.ZBAR_CFG_BINARY, 1);
+      s.setConfig(T.ZBAR_NONE, C.ZBAR_CFG_TEST_INVERTED, 1); // barcode terang di atas gelap
+      zbarScanner = s;
+    }).catch(function () {});
+  }
+  var zbarSiap = siapkanZbar();
+
+  // Mesin 2: ZXing sebagai pembanding.
+  var zxHints = new Map();
+  zxHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+    ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A,
+    ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+    ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.QR_CODE
+  ]);
+  zxHints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  var zxReader = new ZXing.MultiFormatReader();
+  zxReader.setHints(zxHints);
+  function zxingDecode() {
+    try {
+      var lum = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+      var r = zxReader.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum)));
+      var fmt = ZXing.BarcodeFormat[r.getBarcodeFormat()];
+      return { text: r.getText(), tipe: fmt };
+    } catch (e) { return null; }
+  }
+
+  // Mesin 3: BarcodeDetector bawaan (Chrome Android) - dipercepat perangkat keras.
+  var detektor = null;
+  if ("BarcodeDetector" in window) {
+    try {
+      BarcodeDetector.getSupportedFormats().then(function (list) {
+        var mau = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "qr_code"];
+        var pakai = mau.filter(function (f) { return list.indexOf(f) >= 0; });
+        if (pakai.length) detektor = new BarcodeDetector({ formats: pakai });
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  /* --- pengolahan gambar --- */
+  var digitalZoom = 1, nativeZoom = false, track = null;
+
+  // Area video yang benar-benar terlihat di layar (memperhitungkan object-fit: cover dan zoom digital).
+  function areaTerlihat() {
+    var vw = video.videoWidth, vh = video.videoHeight;
+    var bw = box.clientWidth, bh = box.clientHeight;
+    var skala = Math.max(bw / vw, bh / vh);
+    var w = bw / skala, h = bh / skala;
+    if (!nativeZoom && digitalZoom > 1) { w /= digitalZoom; h /= digitalZoom; }
+    return { x: (vw - w) / 2, y: (vh - h) / 2, w: w, h: h };
+  }
+
+  function normalisasi(gray, w, h, mode) {
+    // Regangkan kontras (persentil 2%-98%) lalu koreksi gamma sesuai kecerahan rata-rata.
+    var hist = new Uint32Array(256), n = w * h, i;
+    for (i = 0; i < n; i++) hist[gray[i]]++;
+    var lo = 0, hi = 255, acc = 0, tLo = n * 0.02, tHi = n * 0.98;
+    for (i = 0; i < 256; i++) { acc += hist[i]; if (acc >= tLo) { lo = i; break; } }
+    acc = 0;
+    for (i = 0; i < 256; i++) { acc += hist[i]; if (acc >= tHi) { hi = i; break; } }
+    if (hi - lo < 24) { lo = Math.max(0, lo - 12); hi = Math.min(255, lo + 40); }
+    var sum = 0; for (i = 0; i < 256; i++) sum += i * hist[i];
+    var mean = sum / n;
+    var gamma = mean < 80 ? 0.6 : (mean > 185 ? 1.6 : 1);
+    var lut = new Uint8Array(256);
+    for (i = 0; i < 256; i++) {
+      var v = (i - lo) / (hi - lo); v = v < 0 ? 0 : (v > 1 ? 1 : v);
+      lut[i] = Math.round(Math.pow(v, gamma) * 255);
+    }
+    for (i = 0; i < n; i++) gray[i] = lut[gray[i]];
+    return mean;
+  }
+
+  function pertajam(gray, w, h) {
+    // Unsharp mask 3x3 sederhana untuk membantu gambar yang sedikit buram/tidak fokus.
+    var out = new Uint8Array(gray.length), x, y, i;
+    for (y = 1; y < h - 1; y++) {
+      for (x = 1; x < w - 1; x++) {
+        i = y * w + x;
+        var v = 5 * gray[i] - gray[i - 1] - gray[i + 1] - gray[i - w] - gray[i + w];
+        out[i] = v < 0 ? 0 : (v > 255 ? 255 : v);
+      }
+    }
+    return out;
+  }
+
+  // Ambil potongan video -> gray. region dalam koordinat relatif area terlihat (0..1).
+  function ambil(region, rot, opsi) {
+    var v = areaTerlihat();
+    var sx = v.x + v.w * region.x, sy = v.y + v.h * region.y, sw = v.w * region.w, sh = v.h * region.h;
+    // ukuran keluaran: perbesar potongan kecil, perkecil yang terlalu besar
+    var target = Math.max(640, Math.min(1280, sw));
+    var s = target / sw;
+    var ow = Math.round(sw * s), oh = Math.round(sh * s);
+    canvas.width = ow; canvas.height = oh;
+    ctx.save();
+    if (rot) {
+      ctx.translate(ow / 2, oh / 2);
+      ctx.rotate(rot * Math.PI / 180);
+      ctx.fillStyle = "#808080"; ctx.fillRect(-ow, -oh, ow * 2, oh * 2);
+      ctx.drawImage(video, sx, sy, sw, sh, -ow / 2, -oh / 2, ow, oh);
+    } else {
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, ow, oh);
+    }
+    ctx.restore();
+    var img = ctx.getImageData(0, 0, ow, oh), d = img.data, n = ow * oh, gray = new Uint8Array(n), i;
+    for (i = 0; i < n; i++) gray[i] = (d[i * 4] * 77 + d[i * 4 + 1] * 150 + d[i * 4 + 2] * 29) >> 8;
+    var mean = 0;
+    if (opsi.norm) mean = normalisasi(gray, ow, oh);
+    if (opsi.sharp) gray = pertajam(gray, ow, oh);
+    if (opsi.norm || opsi.sharp) { // tulis balik agar ZXing juga memakai gambar yang sudah ditingkatkan
+      for (i = 0; i < n; i++) { d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = gray[i]; d[i * 4 + 3] = 255; }
+      ctx.putImageData(img, 0, 0);
+    }
+    return { gray: gray, w: ow, h: oh, mean: mean };
+  }
+
+  var PITA = { x: 0.02, y: 0.28, w: 0.96, h: 0.44 };
+  var TENGAH = { x: 0.02, y: 0.12, w: 0.96, h: 0.76 };
+  var PENUH = { x: 0, y: 0, w: 1, h: 1 };
+  var RAPAT = { x: 0.2, y: 0.34, w: 0.6, h: 0.32 };
+
+  // Urutan strategi dipakai bergilir agar setiap sudut/kondisi cahaya tercakup dalam ~1 detik.
+  var LANGKAH = [
+    { r: PITA, rot: 0, norm: false, zx: false },
+    { r: PITA, rot: 0, norm: true, zx: true },
+    { r: TENGAH, rot: 0, norm: true, zx: false },
+    { r: PITA, rot: 0, norm: true, sharp: true, zx: true },
+    { r: TENGAH, rot: 18, norm: true, zx: false },
+    { r: TENGAH, rot: -18, norm: true, zx: false },
+    { r: RAPAT, rot: 0, norm: true, zx: true },
+    { r: PENUH, rot: 0, norm: true, zx: false },
+    { r: TENGAH, rot: 36, norm: true, zx: false },
+    { r: TENGAH, rot: -36, norm: true, zx: false },
+    { r: TENGAH, rot: 90, norm: true, zx: false }
+  ];
+  var indeks = 0, sibuk = false, jalan = false, rataTerang = 128, terangHitung = 0;
+
+  function pantauCahaya(mean) {
+    if (!mean) return;
+    rataTerang = rataTerang * 0.8 + mean * 0.2;
+    terangHitung++;
+    if (terangHitung % 6 !== 0) return;
+    if (formTerbuka) return;
+    if (rataTerang < 55) { hintEl.textContent = "Terlalu gelap - tambah cahaya atau nyalakan senter"; hintEl.className = "hint warn"; }
+    else if (rataTerang > 205) { hintEl.textContent = "Terlalu silau - hindari pantulan cahaya langsung"; hintEl.className = "hint warn"; }
+    else { hintEl.textContent = teksHint(); hintEl.className = "hint"; }
+  }
+
+  async function langkahSatu(langkah) {
+    var hasil = null;
+    var g = ambil(langkah.r, langkah.rot, langkah);
+    if (langkah.norm || indeks % 4 === 0) pantauCahaya(g.mean || (function () { var s = 0; for (var i = 0; i < g.gray.length; i += 40) s += g.gray[i]; return s / (g.gray.length / 40); })());
+    if (zbarScanner) {
+      try {
+        var sim = await window.zbarWasm.scanGrayBuffer(g.gray, g.w, g.h, zbarScanner);
+        if (sim && sim.length) hasil = { text: sim[0].decode(), tipe: sim[0].typeName };
+      } catch (e) {}
+    }
+    if (!hasil && langkah.zx) hasil = zxingDecode();
+    return hasil;
+  }
+
+  async function putaran() {
+    if (sibuk || !jalan || formTerbuka || video.readyState < 2 || !video.videoWidth) return;
+    sibuk = true;
+    try {
+      if (detektor) {
+        try {
+          var d = await detektor.detect(video);
+          if (d && d.length) { terima(d[0].rawValue, d[0].format); sibuk = false; return; }
+        } catch (e) {}
+      }
+      // dua strategi per putaran
+      for (var k = 0; k < 2; k++) {
+        var hasil = await langkahSatu(LANGKAH[indeks % LANGKAH.length]);
+        indeks++;
+        if (hasil && hasil.text) { terima(hasil.text, hasil.tipe); break; }
+      }
+    } finally { sibuk = false; }
+  }
+
+  /* ---------- kamera ---------- */
+  function setZoom(z) {
+    var tombol = { 1: "btnZ1", 2: "btnZ2", 3: "btnZ3" };
+    for (var k in tombol) document.getElementById(tombol[k]).className = (Number(k) === z) ? "on" : "";
+    if (track && nativeZoom) {
+      var cap = track.getCapabilities();
+      var nilai = Math.max(cap.zoom.min, Math.min(cap.zoom.max, z));
+      track.applyConstraints({ advanced: [{ zoom: nilai }] }).catch(function () {});
+      digitalZoom = 1; video.style.transform = "none";
+    } else {
+      digitalZoom = z; video.style.transform = "scale(" + z + ")";
+    }
+  }
+  document.getElementById("btnZ1").onclick = function () { setZoom(1); };
+  document.getElementById("btnZ2").onclick = function () { setZoom(2); };
+  document.getElementById("btnZ3").onclick = function () { setZoom(3); };
+
+  var senterAktif = false;
+  document.getElementById("btnTorch").onclick = function () {
+    if (!track) return;
+    senterAktif = !senterAktif;
+    track.applyConstraints({ advanced: [{ torch: senterAktif }] }).catch(function () {});
+    this.className = senterAktif ? "on" : "";
+  };
+
+  // Ketuk layar untuk memaksa fokus ulang (didukung sebagian perangkat Android).
+  box.addEventListener("click", function (e) {
+    if (!track || !track.getCapabilities) return;
+    var cap = track.getCapabilities();
+    if (!cap.focusMode) return;
+    var r = box.getBoundingClientRect();
+    var poi = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+    track.applyConstraints({ advanced: [{ focusMode: "single-shot", pointsOfInterest: [poi] }] })
+      .then(function () { setTimeout(function () { track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(function () {}); }, 1200); })
+      .catch(function () {});
+  });
+
+  document.getElementById("btnStart").onclick = function () {
+    bukaKunciAudio();
+    var startEl = document.getElementById("start");
+    var msgEl = document.getElementById("startMsg");
+    if (!window.isSecureContext || !navigator.mediaDevices) {
+      msgEl.textContent = "Kamera memerlukan koneksi HTTPS. Buka ulang lewat QR Code dari aplikasi.";
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 },
+        frameRate: { ideal: 30 }
+      }
+    }).then(function (stream) {
+      video.srcObject = stream;
+      track = stream.getVideoTracks()[0];
+      var cap = track.getCapabilities ? track.getCapabilities() : {};
+      var adv = [];
+      if (cap.focusMode && cap.focusMode.indexOf("continuous") >= 0) adv.push({ focusMode: "continuous" });
+      if (cap.exposureMode && cap.exposureMode.indexOf("continuous") >= 0) adv.push({ exposureMode: "continuous" });
+      if (cap.whiteBalanceMode && cap.whiteBalanceMode.indexOf("continuous") >= 0) adv.push({ whiteBalanceMode: "continuous" });
+      adv.forEach(function (c) { track.applyConstraints({ advanced: [c] }).catch(function () {}); });
+      nativeZoom = !!(cap.zoom && cap.zoom.max && cap.zoom.max >= 2);
+      if (cap.torch) document.getElementById("btnTorch").style.display = "";
+      return video.play();
+    }).then(function () {
+      startEl.style.display = "none";
+      return zbarSiap;
+    }).then(function () {
+      jalan = true;
+      (function loop() { putaran().then(function () { setTimeout(loop, 40); }); })();
+    }).catch(function (err) {
+      msgEl.textContent = "Tidak bisa membuka kamera: " + (err && err.message ? err.message : err);
+    });
+  };
+
+  /* ---------- cadangan: foto barcode ---------- */
+  var fotoInput = document.getElementById("foto");
+  document.getElementById("btnFoto").onclick = function () { fotoInput.click(); };
+  fotoInput.onchange = function () {
+    var file = fotoInput.files && fotoInput.files[0];
+    if (!file) return;
+    var img = new Image();
+    img.onload = async function () {
+      var skala = Math.min(1, 2200 / Math.max(img.width, img.height));
+      var w = Math.round(img.width * skala), h = Math.round(img.height * skala);
+      var sudut = [0, 90, 20, -20, 45, -45];
+      var ketemu = null;
+      await zbarSiap;
+      for (var a = 0; a < sudut.length && !ketemu; a++) {
+        canvas.width = w; canvas.height = h;
+        ctx.save(); ctx.translate(w / 2, h / 2); ctx.rotate(sudut[a] * Math.PI / 180);
+        ctx.fillStyle = "#808080"; ctx.fillRect(-w, -h, w * 2, h * 2);
+        ctx.drawImage(img, -w / 2, -h / 2, w, h); ctx.restore();
+        var idata = ctx.getImageData(0, 0, w, h), dd = idata.data, gray = new Uint8Array(w * h);
+        for (var i = 0; i < gray.length; i++) gray[i] = (dd[i * 4] * 77 + dd[i * 4 + 1] * 150 + dd[i * 4 + 2] * 29) >> 8;
+        normalisasi(gray, w, h);
+        if (zbarScanner) {
+          try {
+            var sim = await window.zbarWasm.scanGrayBuffer(gray, w, h, zbarScanner);
+            if (sim && sim.length) ketemu = { text: sim[0].decode(), tipe: sim[0].typeName };
+          } catch (e) {}
+        }
+        if (!ketemu) {
+          for (i = 0; i < gray.length; i++) { dd[i * 4] = dd[i * 4 + 1] = dd[i * 4 + 2] = gray[i]; dd[i * 4 + 3] = 255; }
+          ctx.putImageData(idata, 0, 0);
+          ketemu = zxingDecode();
+        }
+      }
+      URL.revokeObjectURL(img.src); fotoInput.value = "";
+      if (ketemu) kirim(ketemu.text); else toast("Barcode tidak terbaca di foto, coba lebih dekat dan terang", "bad");
+    };
+    img.src = URL.createObjectURL(file);
+  };
+
+  /* ---------- hasil scan sesuai mode ---------- */
+  function hasilScan(msg) {
+    if (msg.mode === "produk") {
+      if (msg.found) {
+        toast("Barcode sudah terdaftar: " + msg.nama + ". Produk tidak ditambahkan.", "bad");
+        if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+      } else {
+        if (navigator.vibrate) navigator.vibrate(80);
+        bukaForm(msg.code);
+      }
+      return;
+    }
+    if (msg.found) { toast("Masuk keranjang: " + msg.nama, "ok"); if (navigator.vibrate) navigator.vibrate(80); }
+    else {
+      toast("Barcode " + msg.code + " belum terdaftar. Pilih mode Tambah Produk untuk mendaftarkannya.", "bad");
+      if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+    }
+  }
+
+  /* ---------- form tambah produk ---------- */
+  var formEl = document.getElementById("form");
+  var elBarcode = document.getElementById("fBarcode"), elNama = document.getElementById("fNama");
+  var elKategori = document.getElementById("fKategori"), elSatuan = document.getElementById("fSatuan");
+  var elBeli = document.getElementById("fBeli"), elJual = document.getElementById("fJual");
+  var elStok = document.getElementById("fStok"), elMin = document.getElementById("fMin");
+  var elErr = document.getElementById("fError"), btnSimpan = document.getElementById("fSimpan");
+  var elPrev = document.getElementById("fFotoPrev"), btnHapusFoto = document.getElementById("fFotoHapus");
+  var saveTimer = null;
+
+  ["pcs", "botol", "pack", "dus", "box", "kg", "gram", "liter", "lusin", "sachet", "bungkus"].forEach(function (u) {
+    var o = document.createElement("option"); o.value = u; o.textContent = u; elSatuan.appendChild(o);
+  });
+
+  function angka(v) { return Number(String(v).replace(/\D/g, "")) || 0; }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-uang]"), function (el) {
+    el.addEventListener("input", function () { var n = angka(el.value); el.value = n ? n.toLocaleString("id-ID") : ""; });
+    el.addEventListener("focus", function () { try { el.select(); } catch (e) {} });
+  });
+
+  function isiKategori(list, dipilih) {
+    kategori = list;
+    var lama = elKategori.value;
+    elKategori.innerHTML = "";
+    var kosong = document.createElement("option"); kosong.value = ""; kosong.textContent = "Tanpa kategori"; elKategori.appendChild(kosong);
+    list.forEach(function (k) { var o = document.createElement("option"); o.value = k.id; o.textContent = k.nama; elKategori.appendChild(o); });
+    elKategori.value = dipilih != null ? String(dipilih) : lama;
+  }
+
+  function resetForm() {
+    elBarcode.value = ""; elNama.value = ""; elKategori.value = ""; elSatuan.value = "pcs";
+    elBeli.value = ""; elJual.value = ""; elStok.value = ""; elMin.value = "";
+    fotoData = null; elPrev.style.display = "none"; btnHapusFoto.style.display = "none";
+    elErr.textContent = ""; document.getElementById("katBaruRow").style.display = "none";
+  }
+  function bukaForm(code) {
+    if (code !== undefined) elBarcode.value = code || "";
+    elErr.textContent = "";
+    formTerbuka = true; formEl.className = "form show";
+    setTimeout(function () { if (!elNama.value) elNama.focus(); }, 150);
+  }
+  function tutupForm() { formTerbuka = false; formEl.className = "form"; }
+  function selesaiSimpan() { clearTimeout(saveTimer); btnSimpan.disabled = false; btnSimpan.textContent = "Simpan Produk"; }
+
+  document.getElementById("btnTanpa").onclick = function () { bukaForm(""); };
+  document.getElementById("fScanUlang").onclick = tutupForm; // isian tetap tersimpan; scan berikutnya mengisi barcode
+  document.getElementById("fBatal").onclick = function () { resetForm(); selesaiSimpan(); tutupForm(); };
+
+  document.getElementById("fKatBaru").onclick = function () {
+    var row = document.getElementById("katBaruRow");
+    row.style.display = row.style.display === "none" ? "flex" : "none";
+    if (row.style.display === "flex") document.getElementById("katBaruNama").focus();
+  };
+  document.getElementById("katBaruOk").onclick = function () {
+    var nama = document.getElementById("katBaruNama").value.trim();
+    if (!nama) { elErr.textContent = "Nama kategori belum diisi"; return; }
+    if (!wsReady) { elErr.textContent = "Belum terhubung ke aplikasi"; return; }
+    elErr.textContent = "";
+    ws.send(JSON.stringify({ type: "kategori_baru", nama: nama }));
+  };
+
+  // Foto: dipotong ke rasio kartu produk dan diperkecil (JPEG) seperti di aplikasi desktop.
+  function prosesFoto(file) {
+    if (!file) return;
+    var img = new Image();
+    img.onload = function () {
+      var L = 400, T = 250, c = document.createElement("canvas");
+      c.width = L; c.height = T;
+      var x = c.getContext("2d");
+      var skala = Math.max(L / img.width, T / img.height), w = img.width * skala, h = img.height * skala;
+      x.fillStyle = "#fff"; x.fillRect(0, 0, L, T);
+      x.drawImage(img, (L - w) / 2, (T - h) / 2, w, h);
+      URL.revokeObjectURL(img.src);
+      fotoData = c.toDataURL("image/jpeg", 0.82);
+      elPrev.src = fotoData; elPrev.style.display = ""; btnHapusFoto.style.display = "";
+    };
+    img.onerror = function () { elErr.textContent = "Gambar tidak dapat dibaca"; };
+    img.src = URL.createObjectURL(file);
+  }
+  var inK = document.getElementById("fFotoInputKamera"), inG = document.getElementById("fFotoInputGaleri");
+  document.getElementById("fFotoKamera").onclick = function () { inK.click(); };
+  document.getElementById("fFotoGaleri").onclick = function () { inG.click(); };
+  inK.onchange = function () { prosesFoto(inK.files && inK.files[0]); inK.value = ""; };
+  inG.onchange = function () { prosesFoto(inG.files && inG.files[0]); inG.value = ""; };
+  btnHapusFoto.onclick = function () { fotoData = null; elPrev.style.display = "none"; btnHapusFoto.style.display = "none"; };
+
+  btnSimpan.onclick = function () {
+    elErr.textContent = "";
+    var nama = elNama.value.trim();
+    if (!nama) { elErr.textContent = "Nama produk wajib diisi"; elNama.focus(); return; }
+    if (!angka(elJual.value)) { elErr.textContent = "Harga jual belum diisi"; elJual.focus(); return; }
+    if (!wsReady) { elErr.textContent = "Belum terhubung ke aplikasi. Tunggu sebentar lalu coba lagi."; return; }
+    btnSimpan.disabled = true; btnSimpan.textContent = "Menyimpan...";
+    saveTimer = setTimeout(function () { selesaiSimpan(); elErr.textContent = "Tidak ada balasan dari aplikasi. Periksa koneksi lalu coba lagi."; }, 15000);
+    ws.send(JSON.stringify({
+      type: "produk_baru",
+      data: {
+        nama: nama,
+        barcode: elBarcode.value.trim() || null,
+        kategori_id: elKategori.value ? Number(elKategori.value) : null,
+        harga_beli: angka(elBeli.value),
+        harga_jual: angka(elJual.value),
+        stok: angka(elStok.value),
+        stok_minimum: angka(elMin.value),
+        satuan: elSatuan.value || "pcs",
+        foto: fotoData
+      }
+    }));
+  };
+
+  function hasilSimpan(msg) {
+    selesaiSimpan();
+    if (msg.ok) {
+      resetForm(); tutupForm();
+      toast("Tersimpan: " + msg.nama + ". Scan produk berikutnya.", "ok");
+      if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
+    } else {
+      elErr.textContent = msg.pesan || "Gagal menyimpan produk";
+      if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+    }
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>
