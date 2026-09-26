@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Banknote, FileClock, Minus, Plus, RotateCcw, Save, ShoppingCart, Trash2 } from "lucide-react";
 import { formatRupiah } from "../../utils/currency";
 import { ProductThumb } from "./ProductThumb";
@@ -20,6 +20,49 @@ interface Props {
   onBukaDraftList: () => void;
   onReset: () => void;
   jumlahDraft: number;
+}
+
+// Jumlah bisa diketik langsung (mis. 100) selain lewat tombol +/-.
+// Nilai disimpan saat Enter/blur; kosong atau 0 dikembalikan ke jumlah semula
+// agar item tidak terhapus tanpa sengaja (hapus tetap lewat tombol hapus / -).
+function JumlahInput({ jumlah, stok, onUbah }: { jumlah: number; stok: number; onUbah: (jumlah: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const batal = useRef(false);
+
+  function simpan() {
+    if (draft === null || batal.current) {
+      batal.current = false;
+      setDraft(null);
+      return;
+    }
+    const nilai = parseInt(draft, 10);
+    if (nilai > 0 && nilai !== jumlah) onUbah(nilai);
+    setDraft(null);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      aria-label="Jumlah"
+      title={`Stok tersedia: ${stok}`}
+      value={draft ?? String(jumlah)}
+      onFocus={(e) => {
+        setDraft(String(jumlah));
+        e.target.select();
+      }}
+      onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
+      onBlur={simpan}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          batal.current = true;
+          e.currentTarget.blur();
+        }
+      }}
+      className="w-12 rounded-lg border border-slate-200 bg-white px-1 py-0.5 text-center text-sm font-bold text-ink focus:border-ink focus:outline-none"
+    />
+  );
 }
 
 export function CartPanel({
@@ -105,9 +148,11 @@ export function CartPanel({
                       >
                         <Minus size={13} />
                       </button>
-                      <span className="w-6 text-center text-sm font-bold text-ink">
-                        {String(item.jumlah).padStart(2, "0")}
-                      </span>
+                      <JumlahInput
+                        jumlah={item.jumlah}
+                        stok={item.produk.stok}
+                        onUbah={(jumlah) => onUbahJumlah(item.produk.id, jumlah)}
+                      />
                       <button
                         onClick={() => onUbahJumlah(item.produk.id, item.jumlah + 1)}
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-ink hover:bg-brand-500"
